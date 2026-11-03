@@ -24,30 +24,39 @@
         header {
             text-align: center;
             margin-bottom: 15px;
+            width: 100%;
+            max-width: 750px;
         }
 
         h1 {
             color: #2c3e50;
             font-size: 1.8rem;
+            margin-bottom: 10px;
         }
 
-        /* Modal / Manual del Agente */
-        .manual-btn {
-            background-color: #f39c12;
+        .header-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Botones generales */
+        .btn {
             color: white;
             border: none;
             padding: 10px 18px;
             font-weight: bold;
             border-radius: 20px;
             cursor: pointer;
-            margin-top: 5px;
             box-shadow: 0 3px 6px rgba(0,0,0,0.15);
             transition: transform 0.2s;
         }
 
-        .manual-btn:hover {
-            transform: scale(1.05);
-        }
+        .btn:hover { transform: scale(1.05); }
+        .btn-manual { background-color: #f39c12; }
+        .btn-registro { background-color: #34495e; }
+        .btn-empezar { background-color: #27ae60; font-size: 1.1rem; padding: 12px 24px; margin-top: 15px; width: 100%;}
 
         /* Zona del Personaje Avatar */
         .avatar-container {
@@ -72,9 +81,7 @@
             line-height: 1;
         }
 
-        .dialog-box {
-            flex: 1;
-        }
+        .dialog-box { flex: 1; }
 
         .character-name {
             font-weight: bold;
@@ -129,6 +136,8 @@
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
             user-select: none;
             transition: transform 0.2s;
+            text-align: center;
+            padding: 10px;
         }
 
         .waste-card:active {
@@ -168,7 +177,7 @@
         .bin-white { background-color: #ffffff; color: #2c3e50; border: 2px solid #bdc3c7; }
         .bin-black { background-color: #2c3e50; }
 
-        /* Modal emergente para el manual */
+        /* Modales */
         .modal {
             display: none;
             position: fixed;
@@ -180,6 +189,8 @@
             z-index: 100;
         }
 
+        .modal-active { display: flex !important; }
+
         .modal-content {
             background: white;
             padding: 25px;
@@ -187,23 +198,45 @@
             max-width: 500px;
             width: 100%;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
         }
 
-        .modal-content h2 {
-            color: #2c3e50;
-            margin-bottom: 12px;
+        .modal-content h2 { color: #2c3e50; margin-bottom: 15px; text-align: center; }
+        
+        .input-nombre {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 1rem;
         }
 
-        .modal-content ul {
-            list-style: none;
-            margin-bottom: 20px;
+        /* Tabla de registros */
+        .table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
         }
 
-        .modal-content li {
-            margin-bottom: 10px;
-            font-size: 0.95rem;
-            line-height: 1.4;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
         }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.9rem;
+        }
+
+        th { background-color: #2c3e50; color: white; position: sticky; top: 0; }
+        
+        .status-completado { color: #27ae60; font-weight: bold; }
+        .status-mitad { color: #f39c12; font-weight: bold; }
+        .status-abandono { color: #e74c3c; font-weight: bold; }
 
         .close-btn {
             background: #e74c3c;
@@ -213,12 +246,14 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            float: right;
+            width: 100%;
+            margin-top: 10px;
         }
 
         @media (max-width: 600px) {
             .bins-row { flex-direction: column; }
-            .bin { height: 100px; }
+            .bin { height: 100px; flex-direction: row; }
+            .waste-card { width: 100%; max-width: 200px; }
         }
     </style>
 </head>
@@ -226,22 +261,24 @@
 
     <header>
         <h1>🌱 EcoSegrega: Desafío Urbano</h1>
-        <button class="manual-btn" onclick="toggleManual(true)">📖 Abrir Manual del Agente</button>
+        <div class="header-buttons">
+            <button class="btn btn-manual" onclick="toggleModal('manualModal', true)">📖 Manual del Agente</button>
+            <button class="btn btn-registro" onclick="abrirRegistro()">📋 Ver Registros</button>
+        </div>
     </header>
 
-    <!-- Agente / Personaje Interactivo -->
     <div class="avatar-container">
         <div class="avatar-img" id="avatarEmoji">🦊</div>
         <div class="dialog-box">
             <div class="character-name">Eko - Guardián Ambiental</div>
-            <div class="dialog-text" id="dialogText">¡Hola, Agente! Ayúdame a limpiar la zona clasificando cada residuo en su lugar.</div>
+            <div class="dialog-text" id="dialogText">Identifícate primero para iniciar la misión, Agente.</div>
         </div>
     </div>
 
     <div class="stats-bar">
         <span>Puntos: <span id="score">0</span></span>
         <span>Aciertos: <span id="hits">0</span></span>
-        <span>Restantes: <span id="remaining">0</span></span>
+        <span>Restantes: <span id="remaining">6</span></span>
     </div>
 
     <div class="game-area">
@@ -265,20 +302,65 @@
         </div>
     </div>
 
+    <!-- Modal: Login de Inicio -->
+    <div class="modal modal-active" id="loginModal">
+        <div class="modal-content">
+            <h2>Ingresa a la Base EcoSegrega</h2>
+            <p style="text-align: center; color: #7f8c8d; margin-bottom: 10px;">Por favor, ingresa tu nombre de agente para registrar tu actividad.</p>
+            <input type="text" id="playerNameInput" class="input-nombre" placeholder="Ej. Agente David..." autocomplete="off">
+            <button class="btn btn-empezar" onclick="iniciarJuego()">Iniciar Misión 🚀</button>
+        </div>
+    </div>
+
     <!-- Modal: Manual de Clasificación -->
     <div class="modal" id="manualModal">
         <div class="modal-content">
             <h2>📘 Manual del Agente Eco</h2>
-            <ul>
-                <li>🟢 <strong>Contenedor Verde:</strong> Restos de comida, cáscaras de frutas, verduras y residuos de jardinería.</li>
-                <li>⚪ <strong>Contenedor Blanco:</strong> Plástico, vidrio, metal, papel y cartón. <em>¡Deben estar limpios y secos!</em></li>
-                <li>⚫ <strong>Contenedor Negro:</strong> Servilletas usadas, papel higiénico, cartón sucio con comida y tapabocas.</li>
+            <ul style="list-style: none; margin-bottom: 20px;">
+                <li style="margin-bottom: 10px;">🟢 <strong>Verde:</strong> Restos de comida, cáscaras de frutas, verduras y jardinería.</li>
+                <li style="margin-bottom: 10px;">⚪ <strong>Blanco:</strong> Plástico, vidrio, metal, papel y cartón limpios.</li>
+                <li style="margin-bottom: 10px;">⚫ <strong>Negro:</strong> Servilletas usadas, cartón sucio y tapabocas.</li>
             </ul>
-            <button class="close-btn" onclick="toggleManual(false)">¡Entendido!</button>
+            <button class="close-btn" onclick="toggleModal('manualModal', false)">¡Entendido!</button>
+        </div>
+    </div>
+
+    <!-- Modal: Registro de Jugadores -->
+    <div class="modal" id="registroModal">
+        <div class="modal-content">
+            <h2>📋 Registro de Agentes</h2>
+            <div class="table-container">
+                <table id="tablaRegistros">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los datos se insertan aquí vía JS -->
+                    </tbody>
+                </table>
+            </div>
+            <button class="close-btn" onclick="toggleModal('registroModal', false)">Cerrar Registro</button>
         </div>
     </div>
 
     <script>
+        // --- BASE DE DATOS LOCAL Y REGISTROS ---
+        const datosSimulados = [
+            { nombre: "Agente Sofía", estado: "Completado", puntos: 60 },
+            { nombre: "Carlos G.", estado: "A la mitad", puntos: 30 },
+            { nombre: "Usuario_102", estado: "Abandonó", puntos: 10 },
+            { nombre: "Valeria", estado: "Completado", puntos: 50 }
+        ];
+
+        // Cargar registros del navegador o usar los simulados si está vacío
+        let registrosGuardados = JSON.parse(localStorage.getItem('ecoSegrega_registros')) || datosSimulados;
+        let jugadorActualIndex = -1;
+
+        // --- LÓGICA DEL JUEGO ---
         const wasteDatabase = [
             { name: "Cáscara de Manzana", type: "verde", icon: "🍎", info: "Las cáscaras van al verde para crear compost." },
             { name: "Botella de Vidrio Limpia", type: "blanco", icon: "🍾", info: "El vidrio limpio se recicla en el contenedor blanco." },
@@ -288,7 +370,8 @@
             { name: "Tapabocas", type: "negro", icon: "😷", info: "Elementos de uso personal o sanitario siempre van al negro." }
         ];
 
-        let queue = [...wasteDatabase];
+        let queue = [];
+        let totalResiduos = wasteDatabase.length;
         let current = null;
         let score = 0;
         let hits = 0;
@@ -298,13 +381,93 @@
         const wasteContainer = document.getElementById('wasteContainer');
         const bins = document.querySelectorAll('.bin');
 
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            if (show) modal.classList.add('modal-active');
+            else modal.classList.remove('modal-active');
+        }
+
+        function iniciarJuego() {
+            let inputNombre = document.getElementById('playerNameInput').value.trim();
+            if (inputNombre === "") inputNombre = "Agente Anónimo";
+
+            // Registrar al nuevo jugador
+            let nuevoJugador = {
+                nombre: inputNombre,
+                estado: "Abandonó", // Por defecto es abandonó hasta que demuestre avance
+                puntos: 0
+            };
+            
+            registrosGuardados.unshift(nuevoJugador); // Agregar al inicio de la lista
+            jugadorActualIndex = 0;
+            guardarRegistros();
+
+            toggleModal('loginModal', false);
+            
+            // Preparar el juego
+            queue = [...wasteDatabase];
+            // Mezclar aleatoriamente los residuos
+            queue.sort(() => Math.random() - 0.5); 
+            
+            avatarEmoji.textContent = '🦊';
+            dialogText.textContent = `¡Hola, ${inputNombre}! Ayúdame a limpiar la zona clasificando cada residuo.`;
+            
+            loadNext();
+        }
+
+        function actualizarProgresoJugador() {
+            if (jugadorActualIndex === -1) return;
+
+            let residuosClasificados = totalResiduos - queue.length - (current ? 1 : 0);
+            
+            // Determinar estado actual
+            if (queue.length === 0 && !current) {
+                registrosGuardados[jugadorActualIndex].estado = "Completado";
+            } else if (residuosClasificados >= (totalResiduos / 2)) {
+                registrosGuardados[jugadorActualIndex].estado = "A la mitad";
+            } else {
+                registrosGuardados[jugadorActualIndex].estado = "Abandonó"; 
+            }
+
+            registrosGuardados[jugadorActualIndex].puntos = score;
+            guardarRegistros();
+        }
+
+        function guardarRegistros() {
+            localStorage.setItem('ecoSegrega_registros', JSON.stringify(registrosGuardados));
+        }
+
+        function abrirRegistro() {
+            const tbody = document.querySelector('#tablaRegistros tbody');
+            tbody.innerHTML = ''; // Limpiar tabla
+
+            registrosGuardados.forEach(reg => {
+                let claseEstado = '';
+                if (reg.estado === "Completado") claseEstado = 'status-completado';
+                else if (reg.estado === "A la mitad") claseEstado = 'status-mitad';
+                else claseEstado = 'status-abandono';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${reg.nombre}</td>
+                    <td class="${claseEstado}">${reg.estado}</td>
+                    <td>${reg.puntos}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            toggleModal('registroModal', true);
+        }
+
         function loadNext() {
             wasteContainer.innerHTML = '';
             
             if (queue.length === 0) {
+                current = null;
                 avatarEmoji.textContent = '🏆';
-                dialogText.textContent = `¡Misión cumplida! Lograste ${score} puntos. ¡Eres un Agente Eco Oficial!`;
+                dialogText.textContent = `¡Misión cumplida! Lograste ${score} puntos. Los datos han sido registrados.`;
                 document.getElementById('remaining').textContent = '0';
+                actualizarProgresoJugador();
                 return;
             }
 
@@ -316,6 +479,14 @@
             card.draggable = true;
             card.innerHTML = `<span style="font-size: 2.2rem;">${current.icon}</span><span>${current.name}</span>`;
 
+            // Para soporte en móviles (Toque)
+            card.addEventListener('touchstart', (e) => {
+                avatarEmoji.textContent = '🤔';
+                dialogText.textContent = `¿Dónde deberíamos clasificar "${current.name}"? Toca un contenedor.`;
+                card.classList.add('selected-for-mobile');
+            });
+
+            // Arrastrar en PC
             card.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('text', current.type);
                 avatarEmoji.textContent = '🤔';
@@ -323,6 +494,7 @@
             });
 
             wasteContainer.appendChild(card);
+            actualizarProgresoJugador();
         }
 
         bins.forEach(bin => {
@@ -338,30 +510,39 @@
             bin.addEventListener('drop', (e) => {
                 e.preventDefault();
                 bin.classList.remove('drag-over');
-                const selectedType = bin.getAttribute('data-type');
-                
-                if (selectedType === current.type) {
-                    score += 10;
-                    hits++;
-                    avatarEmoji.textContent = '🌟';
-                    dialogText.textContent = `¡Muy bien! ${current.info}`;
-                } else {
-                    score = Math.max(0, score - 5);
-                    avatarEmoji.textContent = '⚠️';
-                    dialogText.textContent = `¡Cuidado! "${current.name}" no va allí. Revisa el manual si tienes dudas.`;
-                }
+                procesarClasificacion(bin.getAttribute('data-type'));
+            });
 
-                document.getElementById('score').textContent = score;
-                document.getElementById('hits').textContent = hits;
-                loadNext();
+            // Soporte para clasificar tocando el contenedor en móviles
+            bin.addEventListener('click', () => {
+                const selectedCard = document.querySelector('.selected-for-mobile');
+                if (selectedCard && current) {
+                    procesarClasificacion(bin.getAttribute('data-type'));
+                }
             });
         });
 
-        function toggleManual(show) {
-            document.getElementById('manualModal').style.display = show ? 'flex' : 'none';
-        }
+        function procesarClasificacion(selectedType) {
+            if (!current) return;
 
-        loadNext();
+            if (selectedType === current.type) {
+                score += 10;
+                hits++;
+                avatarEmoji.textContent = '🌟';
+                dialogText.textContent = `¡Muy bien! ${current.info}`;
+            } else {
+                score = Math.max(0, score - 5);
+                avatarEmoji.textContent = '⚠️';
+                dialogText.textContent = `¡Cuidado! "${current.name}" no va allí. Revisa el manual.`;
+            }
+
+            document.getElementById('score').textContent = score;
+            document.getElementById('hits').textContent = hits;
+            
+            // Actualizamos registro antes de cargar el siguiente
+            actualizarProgresoJugador();
+            loadNext();
+        }
     </script>
 </body>
 </html>
